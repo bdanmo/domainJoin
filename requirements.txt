@@ -1,0 +1,4 @@
+getpass4
+pyad
+pywin32
+wmi

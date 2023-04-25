@@ -1,18 +1,48 @@
 #get required libraries for AD operations
 from getpass import getpass
 import sys
-import wmi
 import subprocess
+from ldap3 import Server, Connection, ALL, NTLM
 from pyad import pyadutils, adcontainer, adgroup, adcomputer
 from pyad.adquery import ADQuery
 
+#check for network connection, suppress output, give success message if connection detected, exit if not
+def check_network_connection():
+    try:
+        subprocess.check_output("ping -n 1 www.google.com", shell=True)
+        print("Netowrk connection detected.")
+        return True
+    except:
+        print("No network connection detected. Please connect to the network and try again.")
+        return False
+    
+#check for network connection, exit if not detected
+if not check_network_connection():
+    input("Press enter to exit.")
+    sys.exit()
 
-# Prompt user for required variables
-domain_name = input("Enter domain name: ")
-new_computer_name = input("Enter new computer name: ")
-domain_admin = input("Enter domain admin username: ")
-domain_admin_password = getpass("Enter domain admin password: ")
+#prompt for domain name, admin username, and password; verify credentials and repeat if incorrect
+while True:
+    domain_name = input("Enter domain name: ")
+    domain_admin = input("Enter domain admin username: ")
+    domain_admin_password = getpass("Enter domain admin password: ")
+
+    try:
+        server = Server(domain_name, get_info=ALL)
+        # Use simple_bind authentication with userPrincipalName (UPN) format
+        connection = Connection(server, user=f"{domain_admin}@{domain_name}", password=domain_admin_password)
+        
+        if connection.bind():
+            print("AD connection and credentials verified.")
+            break
+        else:
+            print("Domain name or admin credentials incorrect. Please try again.")
+    except Exception as e:
+        print("Error connecting to the domain. Please try again.")
+        print(f"Exception: {e}")
+
 domain_prefix, domain_suffix = domain_name.split(".")
+new_computer_name = input("Enter new computer name: ")
 
 # Set default domain name, username, and password for pyad
 pyadutils.set_defaults(ldap_server=domain_name, username=domain_admin, password=domain_admin_password)

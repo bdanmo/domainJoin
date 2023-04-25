@@ -2,7 +2,7 @@
 from getpass import getpass
 import sys
 import subprocess
-from ldap3 import Server, Connection, ALL, NTLM
+from ldap3 import Server, Connection, ALL
 from pyad import pyadutils, adcontainer, adgroup, adcomputer
 from pyad.adquery import ADQuery
 

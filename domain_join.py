@@ -71,10 +71,10 @@ def select_ou(current_dn=None, ou_path=None):
 
     if len(ou_list) == 0:
         print(f"No more sub-OU's detected in the current OU: {ou_path.strip('[]')}")
-        confirmation = input("Do you want to choose this OU? Enter 'yes' to confirm, 'no' to go back: ").lower()
-        if confirmation == 'yes':
+        confirmation = input("Do you want to choose this OU? Enter 'yes/y' to confirm, 'no/n' to go back: ").lower()
+        if confirmation == 'yes' or confirmation == 'y':
             return ou_path.strip('[]') if ou_path else current_dn
-        elif confirmation == 'no':
+        elif confirmation == 'no' or confirmation == 'n':
             if ou_path:
                 parent_dn, _, ou_path = ou_path.rpartition("/")
                 parent_dn, _, _ = parent_dn.rpartition(",")

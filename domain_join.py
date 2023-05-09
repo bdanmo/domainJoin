@@ -69,6 +69,22 @@ def select_ou(current_dn=None, ou_path=None):
     ou_list = [ou for ou in ou_list if "organizationalUnit" in (ou.get_attribute("objectClass") or [])]
     ou_names = [ou.get_attribute("name")[0].strip("[]'") for ou in ou_list if ou.get_attribute("name") is not None]
 
+    if len(ou_list) == 0:
+        print(f"No more sub-OU's detected in the current OU: {ou_path.strip('[]')}")
+        confirmation = input("Do you want to choose this OU? Enter 'yes' to confirm, 'no' to go back: ").lower()
+        if confirmation == 'yes':
+            return ou_path.strip('[]') if ou_path else current_dn
+        elif confirmation == 'no':
+            if ou_path:
+                parent_dn, _, ou_path = ou_path.rpartition("/")
+                parent_dn, _, _ = parent_dn.rpartition(",")
+                return select_ou(parent_dn, ou_path)
+            else:
+                return select_ou()
+        else:
+            print("Invalid input. Please try again.")
+            return select_ou(current_dn, ou_path)
+
     if ou_path:
         print(f"Current OU Path: {ou_path.strip('[]')}")
     print(f"Available OU's in {current_dn}:")

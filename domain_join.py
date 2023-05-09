@@ -119,7 +119,7 @@ def add_group():
                 group_list = [(group_entry.entry_attributes_as_dict['name'][0], group_entry.entry_dn) for group_entry in group_reader]
 
                 if group_list:
-                    print("Available groups matching \'{}\" in {}".format(group_search, domain_name))
+                    print("Available groups matching \"{}\" in {}".format(group_search, domain_name))
                     for i, (group_name, group_dn) in enumerate(group_list, start=1):
                         print(f"{i}. {group_name}")
 

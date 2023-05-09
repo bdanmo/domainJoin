@@ -107,7 +107,7 @@ def add_group():
         group_search = input("Enter search term for security group to add computer to. Type 'exit' to exit: ")
 
         if group_search.lower() == "exit":
-            break
+            return
         else:
             try:
                 search_base = f"DC={domain_prefix},DC={domain_suffix}"
@@ -116,31 +116,41 @@ def add_group():
                 group_obj = ObjectDef('group', connection)
                 group_reader = Reader(connection, group_obj, search_base, search_filter)
                 group_reader.search()
-                group_list = [group_entry.entry_dn for group_entry in group_reader]
+                group_list = [(group_entry.entry_attributes_as_dict['name'][0], group_entry.entry_dn) for group_entry in group_reader]
 
                 if group_list:
-                    print("Available groups in {}".format(domain_name))
-                    for group in group_list:
-                        print(group)
+                    print("Available groups matching \'{}\" in {}".format(group_search, domain_name))
+                    for i, (group_name, group_dn) in enumerate(group_list, start=1):
+                        print(f"{i}. {group_name}")
 
-                    group_dn = input("Enter group DN to add computer to. Type 'back' to search again, or 'exit' to exit: ")
+                    print("0. Search again")
+                    print("-1. Exit")
 
-                    if group_dn.lower() == "back":
-                        continue
-                    elif group_dn.lower() == "exit":
-                        break
-                    else:
+                    choice = int(input("Enter the number corresponding to your choice: "))
+
+                    if choice > 0 and choice <= len(group_list):
+                        group_name, group_dn = group_list[choice - 1]
                         group = adgroup.ADGroup.from_dn(group_dn)
                         computer = adcomputer.ADComputer.from_cn(new_computer_name)
                         if computer:
                             group.add_members(computer)
-                            print(f"Computer {new_computer_name} added to the group {group_dn}.")
+                            print(f"Computer {new_computer_name} added to the group {group_name}.")
                         else:
                             print(f"Computer {new_computer_name} not found.")
+                    elif choice == 0:
+                        continue
+                    elif choice == -1:
+                        break
+                    else:
+                        print("Invalid choice. Please try again.")
+                        continue
+
                 else:
                     print("No groups found with search term {}".format(group_search))
+
             except Exception as e:
-                print(f"An error occurred: {e}")
+                print(f"Error searching for groups: {e}")
+
 
 # Join the computer to the domain
 ou_path = select_ou()

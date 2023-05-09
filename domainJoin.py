@@ -2,7 +2,7 @@
 from getpass import getpass
 import sys
 import subprocess
-from ldap3 import Server, Connection, ALL
+from ldap3 import Server, Connection, ObjectDef, Reader, ALL
 from pyad import pyadutils, adcontainer, adgroup, adcomputer
 from pyad.adquery import ADQuery
 
@@ -108,33 +108,41 @@ def add_group():
     if group_search == "exit":
         return
     else:
-        # Explicitly set the connection string
-        connection_string = f"Provider=ADSDSOObject;User ID={domain_admin}@{domain_name};Password={domain_admin_password};"
-        query = ADQuery(connection_string=connection_string)
-        
-        query.execute_query(
-            attributes=["name"],
-            where_clause="(&(objectCategory=group)(name=*{}*))".format(group_search),
-        )
-        group_list = [r["name"] for r in query.get_results()]
+        try:
+            search_base = f"DC={domain_prefix},DC={domain_suffix}"
+            search_filter = f"(&(objectCategory=group)(name=*{group_search}*))"
 
-        if group_list:
-            print("Available groups in {}".format(domain_name))
-            for group in group_list:
-                print(group)
+            group_obj = ObjectDef('group', connection)
+            group_reader = Reader(connection, group_obj, search_base, search_filter)
+            group_reader.search()
+            group_list = [group_entry.entry_dn for group_entry in group_reader]
 
-            group_name = input("Enter group to add computer to. Type 'back' to search again, or 'exit' to exit: ")
+            if group_list:
+                print("Available groups in {}".format(domain_name))
+                for group in group_list:
+                    print(group)
 
-            if group_name == "back":
-                add_group()
-            elif group_name == "exit":
-                return
+                group_dn = input("Enter group DN to add computer to. Type 'back' to search again, or 'exit' to exit: ")
+
+                if group_dn == "back":
+                    add_group()
+                elif group_dn == "exit":
+                    return
+                else:
+                    group = adgroup.ADGroup.from_dn(group_dn)
+                    computer = adcomputer.ADComputer.from_cn(new_computer_name)
+                    if computer:
+                        group.add_members(computer)
+                        print(f"Computer {new_computer_name} added to the group {group_dn}.")
+                        add_group()
+                    else:
+                        print(f"Computer {new_computer_name} not found.")
+                        add_group()
             else:
-                group = adgroup.ADGroup.from_cn(group_name)
-                group.add_members(adcomputer.ADComputer.from_cn(new_computer_name))
+                print("No groups found with search term {}".format(group_search))
                 add_group()
-        else:
-            print("No groups found with search term {}".format(group_search))
+        except Exception as e:
+            print(f"Error searching for groups: {e}")
             add_group()
 
 # Join the computer to the domain

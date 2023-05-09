@@ -10,7 +10,7 @@ from pyad.adquery import ADQuery
 def check_network_connection():
     try:
         subprocess.check_output("ping -n 1 www.google.com", shell=True)
-        print("Netowrk connection detected.")
+        print("Network connection detected.")
         return True
     except:
         print("No network connection detected. Please connect to the network and try again.")
@@ -64,8 +64,8 @@ def select_ou(current_dn=None, ou_path=None):
         current_dn = f"DC={domain_prefix},DC={domain_suffix}"
 
     ou_list = adcontainer.ADContainer.from_dn(current_dn).get_children()
-    ou_list = [ou for ou in ou_list if "organizationalUnit" in ou.get_attribute("objectClass")]
-    ou_names = [ou.get_attribute("name")[0].strip("[]'") for ou in ou_list]
+    ou_list = [ou for ou in ou_list if "organizationalUnit" in (ou.get_attribute("objectClass") or [])]
+    ou_names = [ou.get_attribute("name")[0].strip("[]'") for ou in ou_list if ou.get_attribute("name") is not None]
 
     if ou_path:
         print(f"Current OU Path: {ou_path.strip('[]')}")
@@ -103,47 +103,44 @@ def select_ou(current_dn=None, ou_path=None):
         return select_ou(current_dn, ou_path)
 
 def add_group():
-    group_search = input("Enter search term for security group to add computer to. Type 'exit' to exit: ")
+    while True:
+        group_search = input("Enter search term for security group to add computer to. Type 'exit' to exit: ")
 
-    if group_search == "exit":
-        return
-    else:
-        try:
-            search_base = f"DC={domain_prefix},DC={domain_suffix}"
-            search_filter = f"(&(objectCategory=group)(name=*{group_search}*))"
+        if group_search.lower() == "exit":
+            break
+        else:
+            try:
+                search_base = f"DC={domain_prefix},DC={domain_suffix}"
+                search_filter = f"(&(objectCategory=group)(name=*{group_search}*))"
 
-            group_obj = ObjectDef('group', connection)
-            group_reader = Reader(connection, group_obj, search_base, search_filter)
-            group_reader.search()
-            group_list = [group_entry.entry_dn for group_entry in group_reader]
+                group_obj = ObjectDef('group', connection)
+                group_reader = Reader(connection, group_obj, search_base, search_filter)
+                group_reader.search()
+                group_list = [group_entry.entry_dn for group_entry in group_reader]
 
-            if group_list:
-                print("Available groups in {}".format(domain_name))
-                for group in group_list:
-                    print(group)
+                if group_list:
+                    print("Available groups in {}".format(domain_name))
+                    for group in group_list:
+                        print(group)
 
-                group_dn = input("Enter group DN to add computer to. Type 'back' to search again, or 'exit' to exit: ")
+                    group_dn = input("Enter group DN to add computer to. Type 'back' to search again, or 'exit' to exit: ")
 
-                if group_dn == "back":
-                    add_group()
-                elif group_dn == "exit":
-                    return
-                else:
-                    group = adgroup.ADGroup.from_dn(group_dn)
-                    computer = adcomputer.ADComputer.from_cn(new_computer_name)
-                    if computer:
-                        group.add_members(computer)
-                        print(f"Computer {new_computer_name} added to the group {group_dn}.")
-                        add_group()
+                    if group_dn.lower() == "back":
+                        continue
+                    elif group_dn.lower() == "exit":
+                        break
                     else:
-                        print(f"Computer {new_computer_name} not found.")
-                        add_group()
-            else:
-                print("No groups found with search term {}".format(group_search))
-                add_group()
-        except Exception as e:
-            print(f"Error searching for groups: {e}")
-            add_group()
+                        group = adgroup.ADGroup.from_dn(group_dn)
+                        computer = adcomputer.ADComputer.from_cn(new_computer_name)
+                        if computer:
+                            group.add_members(computer)
+                            print(f"Computer {new_computer_name} added to the group {group_dn}.")
+                        else:
+                            print(f"Computer {new_computer_name} not found.")
+                else:
+                    print("No groups found with search term {}".format(group_search))
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
 # Join the computer to the domain
 ou_path = select_ou()

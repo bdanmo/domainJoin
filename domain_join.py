@@ -2,6 +2,7 @@
 from getpass import getpass
 import sys
 import subprocess
+import socket
 from ldap3 import Server, Connection, ObjectDef, Reader, ALL
 from pyad import pyadutils, adcontainer, adgroup, adcomputer
 from pyad.adquery import ADQuery
@@ -57,7 +58,8 @@ def join_domain(domain, ou_path, username, password, new_computer_name):
         subprocess.run(["powershell.exe", "-Command", ps_command], check=True)
         print("Computer joined to the domain successfully.")
     except subprocess.CalledProcessError as e:
-        print(f"Error joining the domain: {e}")
+        sanitized_error = str(e).replace(password, '*****')
+        print(f"Error joining the domain: {sanitized_error}")
 
 def select_ou(current_dn=None, ou_path=None):
     if not current_dn:
@@ -102,7 +104,7 @@ def select_ou(current_dn=None, ou_path=None):
         print("Invalid choice. Please try again.")
         return select_ou(current_dn, ou_path)
 
-def add_group():
+def add_group(ou_path):
     while True:
         group_search = input("Enter search term for security group to add computer to. Type 'exit' to exit: ")
 
@@ -130,12 +132,13 @@ def add_group():
 
                     if choice > 0 and choice <= len(group_list):
                         group_name, group_dn = group_list[choice - 1]
+                        group = adgroup.ADGroup.from_dn(group_dn)
                         try:
-                            print(f"Adding computer {new_computer_name} to group {group_dn}...")
-                            group = adgroup.ADGroup.from_dn(group_dn)
-                            computer = adcomputer.ADComputer.from_cn(new_computer_name)
+                            # construct the DN for the new computer and use it to retrieve the computer object
+                            computer_dn = f"CN={new_computer_name},{ou_path}"
+                            computer = adcomputer.ADComputer.from_dn(computer_dn)
                         except Exception as e:
-                            print(f"Error while retrieving group or computer object: {e}")
+                            print(f"Error while retrieving computer object: {e}")
                             continue
                         if computer:
                             group.add_members(computer)
@@ -156,13 +159,12 @@ def add_group():
             except Exception as e:
                 print(f"Error searching for groups: {e}")
 
-
 # Join the computer to the domain
 ou_path = select_ou()
 join_domain(domain_name, ou_path, domain_admin, domain_admin_password, new_computer_name)
 
 # Add the computer to the security groups
-add_group()
+add_group(ou_path)
 
 # Restart the computer
 print("Please restart your computer for changes to take effect.")

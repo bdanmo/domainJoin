@@ -130,8 +130,13 @@ def add_group():
 
                     if choice > 0 and choice <= len(group_list):
                         group_name, group_dn = group_list[choice - 1]
-                        group = adgroup.ADGroup.from_dn(group_dn)
-                        computer = adcomputer.ADComputer.from_cn(new_computer_name)
+                        try:
+                            print(f"Adding computer {new_computer_name} to group {group_dn}...")
+                            group = adgroup.ADGroup.from_dn(group_dn)
+                            computer = adcomputer.ADComputer.from_cn(new_computer_name)
+                        except Exception as e:
+                            print(f"Error while retrieving group or computer object: {e}")
+                            continue
                         if computer:
                             group.add_members(computer)
                             print(f"Computer {new_computer_name} added to the group {group_name}.")

@@ -48,7 +48,7 @@ new_computer_name = input("Enter new computer name: ")
 # Set default domain name, username, and password for pyad
 pyadutils.set_defaults(ldap_server=domain_name, username=domain_admin, password=domain_admin_password)
 
-def join_domain(domain, ou_path, username, password, new_computer_name):
+def join_domain(domain, ou_path, username, password, new_computer_name=None):
     if new_computer_name is None:
         ps_command = f"""
         $securePassword = ConvertTo-SecureString '{password}' -AsPlainText -Force

@@ -49,11 +49,18 @@ new_computer_name = input("Enter new computer name: ")
 pyadutils.set_defaults(ldap_server=domain_name, username=domain_admin, password=domain_admin_password)
 
 def join_domain(domain, ou_path, username, password, new_computer_name):
-    ps_command = f"""
-    $securePassword = ConvertTo-SecureString '{password}' -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential ('{username}', $securePassword)
-    Add-Computer -DomainName {domain} -Credential $credential -OUPath '{ou_path}' -NewName '{new_computer_name}'
-    """
+    if new_computer_name is None:
+        ps_command = f"""
+        $securePassword = ConvertTo-SecureString '{password}' -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential ('{username}', $securePassword)
+        Add-Computer -DomainName {domain} -Credential $credential -OUPath '{ou_path}'
+        """
+    else:
+        ps_command = f"""
+        $securePassword = ConvertTo-SecureString '{password}' -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential ('{username}', $securePassword)
+        Add-Computer -DomainName {domain} -Credential $credential -OUPath '{ou_path}' -NewName '{new_computer_name}'
+        """
     try:
         subprocess.run(["powershell.exe", "-Command", ps_command], check=True)
         print("Computer joined to the domain successfully.")
